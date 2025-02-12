@@ -86,8 +86,6 @@ qa_chain = ConversationalRetrievalChain.from_llm(
 # -------------------------
 st.title("💬 CampusBot")
 
-query = st.text_input("Ask me anything:")
-
 
 query = st.text_input("")
 

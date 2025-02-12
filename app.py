@@ -89,17 +89,19 @@ st.title("💬 CampusBot")
 query = st.text_input("Ask me anything:")
 
 
-if query.lower() in ["hello", "hi", "namastey", "pranam"]:
-    st.write("Hello, I hope you are doing well 😊.")
-elif query.lower() in ["who are you?", "who are you", "what's your name?"]:
-    st.write("I am CampusBot from IIIT RANCHI, created by Devam Singh from batch 2022-2026, BTech CSE (Specialization in DSAI).")
+query = st.text_input("")
 
 
-
+if query:  # Ensures chatbot only runs when query is not empty
+    if query.lower() in ["hello", "hi", "namastey", "pranam"]:
+        st.write("Hello, I hope you are doing well 😊.")
+    elif query.lower() in ["who are you?", "who are you", "what's your name?"]:
+        st.write("I am CampusBot from IIIT RANCHI, created by Devam Singh from batch 2022-2026, BTech CSE (Specialization in DSAI).")
+    else:
+        try:
+            result = qa_chain.invoke({"question": query})
+            st.write(result["answer"])
+        except Exception as e:
+            st.error(f"Error: {e}")
 else:
-    try:
-        # ✅ Using `.invoke()` to call the chain
-        result = qa_chain.invoke({"question": query})
-        st.write(result["answer"])
-    except Exception as e:
-        st.error(f"Error: {e}")
+    st.write("Ask me anything!")  # Optional placeholder message

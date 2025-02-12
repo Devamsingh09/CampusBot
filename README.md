@@ -86,5 +86,5 @@ Contributions are welcome! Feel free to fork the repository and submit a pull re
 
 Contact
 
-For any queries, reach out to me at your-email@example.com.
+For any queries, reach out to me at devamsingh0009@gmail.com.
 

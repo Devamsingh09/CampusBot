@@ -27,7 +27,7 @@ def load_model():
         print("Downloading embedding model from Google Drive...")
         gdown.download(drive_url, file_path, quiet=False)
 
-    # Verify if the downloaded file is valid
+    # Verifying if the downloaded file is valid
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         print("Download successful!")
     else:
@@ -41,7 +41,7 @@ EMBEDDING_MODEL_PATH = load_model()
 #EMBEDDING_MODEL_PATH = "embedding_model.pkl"
 
 # -------------------------
-# LOAD FAISS INDEX & EMBEDDINGS
+# LOADING FAISS INDEX & EMBEDDINGS
 # -------------------------
 if os.path.exists(EMBEDDING_MODEL_PATH) and os.path.exists(FAISS_INDEX_PATH):
     print("Loading existing embedding model and FAISS index...")

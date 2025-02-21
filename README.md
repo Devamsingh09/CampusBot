@@ -1,5 +1,21 @@
 CampusBot - AI Chatbot for Campus Assistance
 
+CampusBot is an AI-powered chatbot designed to assist students, faculty, and visitors with campus-related queries. It provides instant responses about campus facilities, events, academic information, and more.
+
+Features
+
+📌 Student Assistance - Get details about courses, faculty, and academic schedules.
+
+🏛 Campus Navigation - Find locations of departments, libraries, and other facilities.
+
+📅 Event Updates - Stay informed about campus events, workshops, and deadlines.
+
+🍽 Cafeteria Menu - Check daily food options and prices.
+
+📝 General Queries - Ask about admission, hostel, placements, and more.
+
+🏆 AI-Powered - Uses OpenAI’s API for intelligent responses.
+
 Overview
 
 <img width="959" alt="image" src="https://github.com/user-attachments/assets/9fede338-ccff-4a01-84af-8875a5a83b08" />

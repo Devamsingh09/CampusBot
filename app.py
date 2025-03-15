@@ -8,9 +8,9 @@ from langchain.memory import ConversationBufferMemory
 from dotenv import load_dotenv
 import gdown
 load_dotenv()
-# -------------------------
+
 # CONFIGURATIONS
-# -------------------------
+
 OPENROUTER_API_KEY = st.secrets["OPEN_ROUTER_API_KEY"]
 FAISS_INDEX_PATH = "faiss_index"
 #embedding model
@@ -20,8 +20,8 @@ def load_model():
     import os
 
     file_path = "embedding_model.pkl"
-    file_id = "179hTGfTRQZbEczuR98J12NREDzzw8EZ7"  # Extracted file ID from Google Drive link
-    drive_url = f"https://drive.google.com/uc?id={file_id}"  # Corrected download URL
+    file_id = "179hTGfTRQZbEczuR98J12NREDzzw8EZ7" 
+    drive_url = f"https://drive.google.com/uc?id={file_id}"  
 
     if not os.path.exists(file_path):
         print("Downloading embedding model from Google Drive...")
@@ -40,9 +40,9 @@ EMBEDDING_MODEL_PATH = load_model()
 
 #EMBEDDING_MODEL_PATH = "embedding_model.pkl"
 
-# -------------------------
+
 # LOADING FAISS INDEX & EMBEDDINGS
-# -------------------------
+
 if os.path.exists(EMBEDDING_MODEL_PATH) and os.path.exists(FAISS_INDEX_PATH):
     print("Loading existing embedding model and FAISS index...")
 
@@ -55,9 +55,8 @@ else:
     st.error("FAISS index or embedding model not found. Please generate them first.")
     st.stop()
 
-# -------------------------
 # SETUP FREE CHAT LLM (OPENROUTER)
-# -------------------------
+
 llm = ChatOpenAI(
     api_key=OPENROUTER_API_KEY,
     openai_api_base="https://openrouter.ai/api/v1",
@@ -65,14 +64,14 @@ llm = ChatOpenAI(
     temperature=0
 )
 
-# -------------------------
+
 # MEMORY FOR CHAT HISTORY
-# -------------------------
+
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
-# -------------------------
+
 # RETRIEVER & QA CHAIN
-# -------------------------
+
 retriever = vector_db.as_retriever(search_kwargs={"k": 3})
 
 qa_chain = ConversationalRetrievalChain.from_llm(
@@ -81,16 +80,16 @@ qa_chain = ConversationalRetrievalChain.from_llm(
     memory=memory
 )
 
-# -------------------------
+
 # STREAMLIT UI
-# -------------------------
+
 st.title("💬 CampusBot")
 
 
 query = st.text_input("")
 
 
-if query:  # Ensures chatbot only runs when query is not empty
+if query:  # Ensuring chatbot only runs when query is not empty
     if query.lower() in ["hello", "hi", "namastey", "pranam"]:
         st.write("Hello, I hope you are doing well 😊.")
     elif query.lower() in ["who are you?", "who are you", "what's your name?"]:
@@ -102,4 +101,4 @@ if query:  # Ensures chatbot only runs when query is not empty
         except Exception as e:
             st.error(f"Error: {e}")
 else:
-    st.write("Ask me anything!")  # Optional placeholder message
+    st.write("Ask me anything!")  

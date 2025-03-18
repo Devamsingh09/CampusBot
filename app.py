@@ -92,7 +92,7 @@ query = st.text_input("")
 if query:  # Ensuring chatbot only runs when query is not empty
     if query.lower() in ["hello", "hi", "namastey", "pranam"]:
         st.write("Hello, I hope you are doing well 😊.")
-    elif query.lower() in ["who are you?", "who are you", "what's your name?, "Who created you?"]:
+    elif query.lower() in ["who are you?", "who are you", "what's your name?", "Who created you?"]:
         st.write("I am CampusBot from IIIT RANCHI, created by Devam Singh from batch 2022-2026, BTech CSE (Specialization in DSAI).")
     else:
         try:

@@ -2,16 +2,18 @@ import os
 import pickle
 import streamlit as st
 from langchain.chains import ConversationalRetrievalChain
+from langchain.chains.question_answering import load_qa_chain
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
+from langchain.schema import SystemMessage, HumanMessage
 from dotenv import load_dotenv
 import gdown
 
 load_dotenv()
 
 # CONFIGURATIONS
-OPENROUTER_API_KEY = st.secrets.get("OPEN_ROUTER_API_KEY", os.getenv("OPEN_ROUTER_API_KEY"))
+OPENROUTER_API_KEY = st.secrets["OPEN_ROUTER_API_KEY"]
 FAISS_INDEX_PATH = "faiss_index"
 
 # Embedding model loader
@@ -25,7 +27,7 @@ def load_model():
         print("Downloading embedding model from Google Drive...")
         gdown.download(drive_url, file_path, quiet=False)
 
-    # Verifying if the downloaded file is valid
+    # Verify if the downloaded file is valid
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         print("Download successful!")
     else:
@@ -36,26 +38,31 @@ def load_model():
 EMBEDDING_MODEL_PATH = load_model()
 
 # LOADING FAISS INDEX & EMBEDDINGS
-try:
-    if os.path.exists(EMBEDDING_MODEL_PATH) and os.path.exists(FAISS_INDEX_PATH):
-        print("Loading existing embedding model and FAISS index...")
-        with open(EMBEDDING_MODEL_PATH, "rb") as f:
-            embedding = pickle.load(f)
-        
-        vector_db = FAISS.load_local(FAISS_INDEX_PATH, embedding, allow_dangerous_deserialization=True)
-    else:
-        st.error("FAISS index or embedding model not found. Please generate them first.")
-        st.stop()
-except Exception as e:
-    st.error(f"Error loading FAISS index or embeddings: {e}")
+if os.path.exists(EMBEDDING_MODEL_PATH) and os.path.exists(FAISS_INDEX_PATH):
+    print("Loading existing embedding model and FAISS index...")
+    with open(EMBEDDING_MODEL_PATH, "rb") as f:
+        embedding = pickle.load(f)
+    
+    vector_db = FAISS.load_local(FAISS_INDEX_PATH, embedding, allow_dangerous_deserialization=True)
+else:
+    st.error("FAISS index or embedding model not found. Please generate them first.")
     st.stop()
+
+# SYSTEM PROMPT
+SYSTEM_PROMPT = (
+    "You are CampusBot, an AI assistant providing fact-based responses using retrieved knowledge from a FAISS index. "
+    "Always ground your answers in retrieved content and avoid speculation. "
+    "If the retrieved data is insufficient, state so rather than guessing. "
+    "Provide well-structured, concise, and informative answers. Cite sources when relevant. "
+    "Maintain clarity and a professional yet engaging tone."
+)
 
 # SETUP FREE CHAT LLM (OPENROUTER)
 llm = ChatOpenAI(
     api_key=OPENROUTER_API_KEY,
     openai_api_base="https://openrouter.ai/api/v1",
     model_name="mistralai/mistral-7b-instruct",
-    temperature=0
+    temperature=0,
 )
 
 # MEMORY FOR CHAT HISTORY
@@ -67,7 +74,12 @@ retriever = vector_db.as_retriever(search_kwargs={"k": 3})
 qa_chain = ConversationalRetrievalChain.from_llm(
     llm=llm,
     retriever=retriever,
-    memory=memory
+    memory=memory,
+    combine_docs_chain=load_qa_chain(
+        llm=llm,
+        chain_type="stuff",  # "stuff" is good for small queries
+        prompt=SYSTEM_PROMPT  # Inject system prompt
+    )
 )
 
 # STREAMLIT UI
@@ -82,7 +94,11 @@ if query:
         st.write("I am CampusBot from IIIT RANCHI, created by Devam Singh from batch 2022-2026, BTech CSE (Specialization in DSAI).")
     else:
         try:
-            result = qa_chain.invoke({"question": query})
+            # Ensure system message is always included
+            system_message = SystemMessage(content=SYSTEM_PROMPT)
+            user_message = HumanMessage(content=query)
+
+            result = qa_chain.invoke({"question": [system_message, user_message]})
             st.write(result["answer"])
         except Exception as e:
             st.error(f"Error processing query: {e}")

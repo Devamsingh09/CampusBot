@@ -8,11 +8,10 @@ from langchain.memory import ConversationBufferMemory
 from dotenv import load_dotenv
 import gdown
 
-# Load environment variables
 load_dotenv()
 
 # CONFIGURATIONS
-OPENROUTER_API_KEY = st.secrets["OPEN_ROUTER_API_KEY"] if "OPEN_ROUTER_API_KEY" in st.secrets else os.getenv("OPEN_ROUTER_API_KEY")
+OPENROUTER_API_KEY = st.secrets.get("OPEN_ROUTER_API_KEY", os.getenv("OPEN_ROUTER_API_KEY"))
 FAISS_INDEX_PATH = "faiss_index"
 
 # Embedding model loader
@@ -23,30 +22,32 @@ def load_model():
     drive_url = f"https://drive.google.com/uc?id={file_id}"  
 
     if not os.path.exists(file_path):
-        st.info("Downloading embedding model from Google Drive...")
+        print("Downloading embedding model from Google Drive...")
         gdown.download(drive_url, file_path, quiet=False)
 
+    # Verifying if the downloaded file is valid
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-        return file_path
+        print("Download successful!")
     else:
-        st.error("Downloaded file is invalid or empty. Please check the Google Drive link.")
-        st.stop()
+        raise ValueError("Downloaded file is invalid or empty. Please check the Google Drive link.")
+
+    return file_path
 
 EMBEDDING_MODEL_PATH = load_model()
 
 # LOADING FAISS INDEX & EMBEDDINGS
-if os.path.exists(EMBEDDING_MODEL_PATH) and os.path.exists(FAISS_INDEX_PATH):
-    st.success("Loading existing embedding model and FAISS index...")
-    with open(EMBEDDING_MODEL_PATH, "rb") as f:
-        embedding = pickle.load(f)
-    
-    try:
+try:
+    if os.path.exists(EMBEDDING_MODEL_PATH) and os.path.exists(FAISS_INDEX_PATH):
+        print("Loading existing embedding model and FAISS index...")
+        with open(EMBEDDING_MODEL_PATH, "rb") as f:
+            embedding = pickle.load(f)
+        
         vector_db = FAISS.load_local(FAISS_INDEX_PATH, embedding, allow_dangerous_deserialization=True)
-    except Exception as e:
-        st.error(f"Error loading FAISS index: {e}")
+    else:
+        st.error("FAISS index or embedding model not found. Please generate them first.")
         st.stop()
-else:
-    st.error("FAISS index or embedding model not found. Please generate them first.")
+except Exception as e:
+    st.error(f"Error loading FAISS index or embeddings: {e}")
     st.stop()
 
 # SETUP FREE CHAT LLM (OPENROUTER)
@@ -54,12 +55,7 @@ llm = ChatOpenAI(
     api_key=OPENROUTER_API_KEY,
     openai_api_base="https://openrouter.ai/api/v1",
     model_name="mistralai/mistral-7b-instruct",
-    temperature=0,
-    system_message=(
-        "You are CampusBot, an AI assistant providing fact-based responses using retrieved knowledge from a FAISS index. "
-        "Always ground your answers in retrieved content and avoid speculation. If the retrieved data is insufficient, state so rather than guessing. "
-        "Provide well-structured, concise, and informative answers. Cite sources when relevant. Maintain clarity and a professional yet engaging tone."
-    )
+    temperature=0
 )
 
 # MEMORY FOR CHAT HISTORY
@@ -67,6 +63,7 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 
 # RETRIEVER & QA CHAIN
 retriever = vector_db.as_retriever(search_kwargs={"k": 3})
+
 qa_chain = ConversationalRetrievalChain.from_llm(
     llm=llm,
     retriever=retriever,
@@ -75,18 +72,19 @@ qa_chain = ConversationalRetrievalChain.from_llm(
 
 # STREAMLIT UI
 st.title("💬 CampusBot")
+
 query = st.text_input("Ask me anything!")
 
 if query:
-    try:
-        if query.lower() in ["hello", "hi", "namastey", "pranam"]:
-            st.write("Hello, I hope you are doing well 😊.")
-        elif query.lower() in ["who are you?", "who are you", "what's your name?", "who created you?"]:
-            st.write("I am CampusBot from IIIT RANCHI, created by Devam Singh from batch 2022-2026, BTech CSE (Specialization in DSAI).")
-        else:
+    if query.lower() in ["hello", "hi", "namastey", "pranam"]:
+        st.write("Hello, I hope you are doing well 😊.")
+    elif query.lower() in ["who are you?", "who are you", "what's your name?", "who created you?"]:
+        st.write("I am CampusBot from IIIT RANCHI, created by Devam Singh from batch 2022-2026, BTech CSE (Specialization in DSAI).")
+    else:
+        try:
             result = qa_chain.invoke({"question": query})
             st.write(result["answer"])
-    except Exception as e:
-        st.error(f"Error processing query: {e}")
+        except Exception as e:
+            st.error(f"Error processing query: {e}")
 else:
     st.write("Ask me anything!")

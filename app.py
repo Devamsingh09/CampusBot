@@ -1,7 +1,7 @@
 import os
 import pickle
 import streamlit as st
-from langchain.chains import ConversationalRetrievalChain
+from langchain.chains import ConversationalRetrievalChain, LLMChain
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS
@@ -27,7 +27,6 @@ def load_model():
         print("Downloading embedding model from Google Drive...")
         gdown.download(drive_url, file_path, quiet=False)
 
-    # Verify if the downloaded file is valid
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         print("Download successful!")
     else:
@@ -48,7 +47,7 @@ else:
     st.error("FAISS index or embedding model not found. Please generate them first.")
     st.stop()
 
-# SYSTEM PROMPT TEMPLATE (Fixed)
+# SYSTEM PROMPT TEMPLATE
 SYSTEM_PROMPT_TEMPLATE = """
 You are CampusBot, an AI assistant providing fact-based responses using retrieved knowledge from a FAISS index. 
 Always ground your answers in retrieved content and avoid speculation. 
@@ -63,7 +62,6 @@ Question: {question}
 Helpful Answer:
 """
 
-# Convert system prompt to a valid PromptTemplate
 prompt_template = PromptTemplate(input_variables=["context", "question"], template=SYSTEM_PROMPT_TEMPLATE)
 
 # SETUP FREE CHAT LLM (OPENROUTER)
@@ -77,18 +75,17 @@ llm = ChatOpenAI(
 # MEMORY FOR CHAT HISTORY
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
-# RETRIEVER & QA CHAIN
+# RETRIEVER
 retriever = vector_db.as_retriever(search_kwargs={"k": 3})
 
-qa_chain = ConversationalRetrievalChain.from_llm(
-    llm=llm,
+# FIX: Create LLMChain first
+llm_chain = LLMChain(llm=llm, prompt=prompt_template)
+
+# FIX: Use LLMChain in ConversationalRetrievalChain
+qa_chain = ConversationalRetrievalChain(
     retriever=retriever,
     memory=memory,
-    combine_docs_chain=load_qa_chain(
-        llm=llm,
-        chain_type="stuff",  # "stuff" is good for short answers
-        prompt=prompt_template  # ✅ Fixed: Using PromptTemplate instead of raw string
-    )
+    combine_docs_chain=llm_chain,  # ✅ FIX: Use LLMChain instead of load_qa_chain
 )
 
 # STREAMLIT UI

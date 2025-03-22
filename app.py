@@ -1,9 +1,7 @@
 import os
 import pickle
 import streamlit as st
-from langchain.chains import ConversationalRetrievalChain, LLMChain
-from langchain.chains.question_answering import load_qa_chain
-from langchain.prompts import PromptTemplate
+from langchain.chains import ConversationalRetrievalChain
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
@@ -47,45 +45,24 @@ else:
     st.error("FAISS index or embedding model not found. Please generate them first.")
     st.stop()
 
-# SYSTEM PROMPT TEMPLATE
-SYSTEM_PROMPT_TEMPLATE = """
-You are CampusBot, an AI assistant providing fact-based responses using retrieved knowledge from a FAISS index. 
-Always ground your answers in retrieved content and avoid speculation. 
-If the retrieved data is insufficient, state so rather than guessing. 
-Provide well-structured, concise, and informative answers. Cite sources when relevant. 
-Maintain clarity and a professional yet engaging tone.
-
-Context: {context}
-
-Question: {question}
-
-Helpful Answer:
-"""
-
-prompt_template = PromptTemplate(input_variables=["context", "question"], template=SYSTEM_PROMPT_TEMPLATE)
-
 # SETUP FREE CHAT LLM (OPENROUTER)
 llm = ChatOpenAI(
     api_key=OPENROUTER_API_KEY,
     openai_api_base="https://openrouter.ai/api/v1",
     model_name="mistralai/mistral-7b-instruct",
-    temperature=0,
+    temperature=0
 )
 
 # MEMORY FOR CHAT HISTORY
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
-# RETRIEVER
+# RETRIEVER & QA CHAIN
 retriever = vector_db.as_retriever(search_kwargs={"k": 3})
 
-# FIX: Create LLMChain first
-llm_chain = LLMChain(llm=llm, prompt=prompt_template)
-
-# FIX: Use LLMChain in ConversationalRetrievalChain
-qa_chain = ConversationalRetrievalChain(
+qa_chain = ConversationalRetrievalChain.from_llm(
+    llm=llm,
     retriever=retriever,
-    memory=memory,
-    combine_docs_chain=llm_chain,  # ✅ FIX: Use LLMChain instead of load_qa_chain
+    memory=memory
 )
 
 # STREAMLIT UI

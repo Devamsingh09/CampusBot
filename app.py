@@ -3,10 +3,10 @@ import pickle
 import streamlit as st
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains.question_answering import load_qa_chain
+from langchain.prompts import PromptTemplate
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import SystemMessage, HumanMessage
 from dotenv import load_dotenv
 import gdown
 
@@ -48,14 +48,23 @@ else:
     st.error("FAISS index or embedding model not found. Please generate them first.")
     st.stop()
 
-# SYSTEM PROMPT
-SYSTEM_PROMPT = (
-    "You are CampusBot, an AI assistant providing fact-based responses using retrieved knowledge from a FAISS index. "
-    "Always ground your answers in retrieved content and avoid speculation. "
-    "If the retrieved data is insufficient, state so rather than guessing. "
-    "Provide well-structured, concise, and informative answers. Cite sources when relevant. "
-    "Maintain clarity and a professional yet engaging tone."
-)
+# SYSTEM PROMPT TEMPLATE (Fixed)
+SYSTEM_PROMPT_TEMPLATE = """
+You are CampusBot, an AI assistant providing fact-based responses using retrieved knowledge from a FAISS index. 
+Always ground your answers in retrieved content and avoid speculation. 
+If the retrieved data is insufficient, state so rather than guessing. 
+Provide well-structured, concise, and informative answers. Cite sources when relevant. 
+Maintain clarity and a professional yet engaging tone.
+
+Context: {context}
+
+Question: {question}
+
+Helpful Answer:
+"""
+
+# Convert system prompt to a valid PromptTemplate
+prompt_template = PromptTemplate(input_variables=["context", "question"], template=SYSTEM_PROMPT_TEMPLATE)
 
 # SETUP FREE CHAT LLM (OPENROUTER)
 llm = ChatOpenAI(
@@ -77,8 +86,8 @@ qa_chain = ConversationalRetrievalChain.from_llm(
     memory=memory,
     combine_docs_chain=load_qa_chain(
         llm=llm,
-        chain_type="stuff",  # "stuff" is good for small queries
-        prompt=SYSTEM_PROMPT  # Inject system prompt
+        chain_type="stuff",  # "stuff" is good for short answers
+        prompt=prompt_template  # ✅ Fixed: Using PromptTemplate instead of raw string
     )
 )
 
@@ -94,11 +103,7 @@ if query:
         st.write("I am CampusBot from IIIT RANCHI, created by Devam Singh from batch 2022-2026, BTech CSE (Specialization in DSAI).")
     else:
         try:
-            # Ensure system message is always included
-            system_message = SystemMessage(content=SYSTEM_PROMPT)
-            user_message = HumanMessage(content=query)
-
-            result = qa_chain.invoke({"question": [system_message, user_message]})
+            result = qa_chain.invoke({"question": query})
             st.write(result["answer"])
         except Exception as e:
             st.error(f"Error processing query: {e}")
